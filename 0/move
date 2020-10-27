@@ -1,0 +1,148 @@
+-- home position is always (0, 0, 0)
+position = { x = 0, y = 0, z = 0 }
+
+-- Notice that this is in local space, so how the turtle is placed
+-- and not in global space, the NESW we are used to have.
+-- North (0, 1)
+-- East  (1, 0) 
+-- South (0, -1)
+-- West  (-1, 0)
+-- orientation = { x = 0, y = 1 } = North as default
+orientation = { 
+    x = 0, 
+    y = 1,
+    north   = { x = 0,  y = 1  },
+    east    = { x = 1,  y = 0  },
+    south   = { x = 0,  y = -1 },
+    west    = { x = -1, y = 0  },
+    default = { x = 0,  y = 1  }
+}
+
+function rotateOrientationRight()
+    local tempx = orientation.x
+    local tempy = orientation.y
+    orientation.x = tempy
+    orientation.y = -tempx
+end
+
+function rotateOrientationLeft()
+    local tempx = orientation.x
+    local tempy = orientation.y
+    orientation.x = -tempy
+    orientation.y = tempx
+end
+
+function positionToString()
+    return "("..tostring(position.x)
+        ..", "..tostring(position.y)
+        ..", "..tostring(position.z)
+        ..", "..getOrientation(orientation)..")"
+end
+
+function getOrientation(ori)
+    if ori.x == 1 and ori.y == 0 then
+        return "E"
+    elseif ori.x == 0 and ori.y == 1 then
+        return "N"
+    elseif ori.x == -1 and ori.y == 0 then
+        return "W"
+    elseif ori.x == 0 and ori.y == -1 then
+        return "S"
+    end
+end
+
+function forward(steps)
+    steps = steps or 1
+    for i = 1, steps do
+        if turtle.detect() then
+            -- if we encounter gravel we need more digging
+            -- but it could also be water, so we want to
+            -- continue going forward after a while.
+            maxTries = 10
+            while maxTries > 0 and turtle.dig() do
+                maxTries = maxTries - 1
+            end
+        end
+        if not turtle.forward() then
+            print("ERROR WHILE GOING FORWARD, ABORTING!")
+            do return end
+        end
+        position.x = position.x + orientation.x
+        position.y = position.y + orientation.y
+        if turtle.detectUp() then
+            turtle.digUp()
+        end
+        if turtle.detectDown() then
+            turtle.digDown()
+        end
+    end
+end
+
+function turnLeft()
+    turtle.turnLeft()
+    rotateOrientationLeft()
+end
+
+function turnRight()
+    turtle.turnRight()
+    rotateOrientationRight()
+end
+
+function moveY(y)
+    while y > 0 and orientation.y >= 0 do
+        turnRight()
+    end
+    while y < 0 and orientation.y <= 0 do
+        turnRight()
+    end
+    forward(math.abs(y))
+end
+
+function moveX(x)
+    while x > 0 and orientation.x >= 0 do
+        turnRight()
+    end
+    while x < 0 and orientation.x <= 0 do
+        turnRight()
+    end
+    forward(math.abs(x))
+end
+
+function toPosition(x, y)
+    dx = position.x - x
+    dy = position.y - y
+    moveX(dx)
+    moveY(dy)
+end
+
+function toPositionYFirst(x, y)
+    dx = position.x - x
+    dy = position.y - y
+    moveY(dy)
+    moveX(dx)
+end
+
+function toDefaultOrientation()
+    toOrientation(orientation.north.x, orientation.north.y)
+end
+
+function toOrientation(x, y)
+    while orientation.x ~= x and orientation.y ~= y do
+        -- Can we do this with one right turn?
+        if x == orientation.y and y == -orientation.x then
+            turnRight()
+        else
+            turnLeft()
+        end
+    end
+end
+
+function toHome()
+    toPosition(0, 0)
+    toDefaultOrientation()
+end
+
+function toChest()
+    toPosition(0, 0)
+    toOrientation(orientation.south.x, orientation.south.y)
+end

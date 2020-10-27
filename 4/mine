@@ -1,0 +1,98 @@
+os.loadAPI('inventory')
+os.loadAPI('move')
+
+function emptyInventoryInChestAndReturn()
+    positionX = move.position.x
+    positionY = move.position.y
+    orientationX = move.orientation.x
+    orientationY = move.orientation.y
+    print("Saved position ("
+        ..tostring(positionX)..", "
+        ..tostring(positionY)..", "
+        ..move.getOrientation({ x = orientationX, y = orientationY })..")")
+    print("Moving to chest...")
+    move.toChest()
+    inventory.empty()
+    print("Returning to saved position...")
+    move.toPositionYFirst(positionX, positionY)
+    move.toOrientation(orientationX, orientationY)
+    print("Restored position ("
+        ..tostring(move.position.x)..", "
+        ..tostring(move.position.y)..", "
+        ..move.getOrientation(move.orientation)..")")
+    print("Continuing...")
+end
+
+function dig()
+    if inventory.isFull() then
+        print("Organizing inventory...")
+        inventory.stack()
+        itemsDropped = inventory.clean()
+        if itemsDropped <= 2 then
+            print("Emptying inventory...")
+            emptyInventoryInChestAndReturn()
+        end
+    end
+    move.forward()
+end
+
+function mine(x, y)
+    for i = 1, x / 2 do
+        print("Mining row "..tostring(2*i-1))
+        for j = 1, y do 
+            dig()
+        end
+        move.turnLeft()
+        dig()
+        move.turnLeft()
+        print("Mining row "..tostring(2*i))
+        for j = 1, y do 
+            dig()
+        end
+        move.turnRight()
+        dig()
+        move.turnRight()
+    end
+    print("Finished mining, returning to chest...")
+    move.toChest()
+    inventory.empty()
+    print("Mining completed!")
+end
+
+function fuelRequired(x, y)
+    return (x + 2) * (y + 2)                -- to dig and turn
+        + math.abs(x) + math.abs(y) + 2     -- to return to chest
+    -- trips to empty the inventory are not included
+end
+
+function checkFuel(x, y)
+    if fuelRequired(x, y) >= turtle.getFuelLevel() then
+        if turtle.getItemCount(slot.fuel) > 1 then
+            print("Refueling...")
+            turtle.select(slot.fuel)
+            fuelQuantity = turtle.getItemCount(slot.fuel)
+            turtle.refuel(fuelQuantity - 1) 
+            checkFuel(x, y)
+        else
+            print("Insufficient fuel!")
+            do return end
+        end
+    end
+end
+
+args = {...}
+if #args ~= 2 then
+    print("Program should be called as 'mine x y', where x, y"
+        .." are the dimensions.")
+    do return end
+end
+x = args[1]
+y = args[2]
+fuel = fuelRequired(x, y)
+print("Digging area of "..tostring(x).."x"..tostring(y))
+print("Total fuel required: "..tostring(fuel)
+    .."/"..tostring(turtle.getFuelLevel()))
+print("Trash slots are: 13, 14, 15 (cobblestone, dirt, gravel)")
+print("Fuel slot is: 16")
+checkFuel(x, y)
+mine(x, y)

@@ -1,0 +1,4 @@
+0 miner1
+1 miner2
+2 miner3
+3 miner4
